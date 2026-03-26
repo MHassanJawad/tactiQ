@@ -1,0 +1,44 @@
+# RT-FSAS Python Dependencies
+# Install with: pip install -r setup/requirements.txt
+
+# PyTorch CPU-only (Python 3.12 compatible)
+torch==2.2.2
+torchvision==0.17.2
+
+# Graph Neural Networks (install separately - see setup instructions)
+# pip install torch_geometric
+# pip install torch_scatter torch_sparse torch_cluster -f https://data.pyg.org/whl/torch-2.2.0+cpu.html
+
+# Vector similarity search
+faiss-cpu==1.8.0
+
+# Google Gemini API
+google-generativeai>=0.7.0
+
+# StatsBomb data loader
+statsbombpy
+
+# Core data science
+pandas>=2.0
+numpy>=1.26
+scikit-learn>=1.4
+scipy
+
+# Visualization
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.20
+umap-learn
+
+# Dashboard
+dash>=2.16
+dash-bootstrap-components
+
+# Notebooks
+jupyter
+ipykernel
+ipywidgets
+
+# Utilities
+tqdm
+joblib
