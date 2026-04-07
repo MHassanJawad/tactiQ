@@ -30,7 +30,7 @@ dependencies:
 
     # Core data science
     - pandas>=2.0
-    - numpy>=1.26
+    - numpy<2
     - scikit-learn>=1.4
     - scipy
 

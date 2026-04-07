@@ -21,11 +21,11 @@ This document serves as the master checklist for the RT-FSAS ML project. The wor
 
 ### Phase 2A: Graph Construction
 - [x] **2A.1 Graph Builder (`src/data/graph_builder.py`)**: Convert a StatsBomb JSON event into a PyTorch Geometric 23-node mathematical graph. *(DONE!)*
-- [ ] **2A.2 Dataset Script (`src/data/dataset.py`)**: Extract thousands of passes/shots from the 38 La Liga matches and run them through the GraphBuilder to save bulk `.pt` (PyTorch) files to disk.
-- [ ] **2A.3 Visualization Demo (`notebooks/02_graph_construction.ipynb`)**: Prove visually that the nodes map accurately on a plotted pitch.
+- [x] **2A.2 Dataset Script (`src/data/dataset.py`)**: Extract thousands of passes/shots from the 38 La Liga matches and run them through the GraphBuilder to save bulk `.pt` (PyTorch) files to disk.
+- [x] **2A.3 Visualization Demo (`notebooks/02_graph_construction.ipynb`)**: Prove visually that the nodes map accurately on a plotted pitch.
 
 ### Phase 3A: GNN Encoder Training
-- [ ] **3A.1 GNN Architecture (`src/models/gnn_encoder.py`)**: Build a 3-layer `GATv2Conv` network that squashes a 23-node graph into a single 128-dimensional latent vector (tactical summary).
+- [x] **3A.1 GNN Architecture (`src/models/gnn_encoder.py`)**: Build a 3-layer `GATv2Conv` network that squashes a 23-node graph into a single 128-dimensional latent vector (tactical summary).
 - [ ] **3A.2 Training Loop (`src/training/train_gnn.py`)**: Train the network to predict the next event type to force it to learn tactical patterns.
 - [ ] **3A.3 Training Notebook (`notebooks/03_gnn_training.ipynb`)**: Plot Loss/Accuracy curves to prove the model is actually learning and not randomly guessing.
 
