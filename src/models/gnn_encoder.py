@@ -16,13 +16,15 @@ class TacticalGNN(torch.nn.Module):
         
         # 1. First Graph Attention Layer
         # Processes 7 raw features (x,y,team,roles) into hidden dimensions
-        self.conv1 = GATv2Conv(num_node_features, hidden_dim, heads=2, concat=False)
+        self.conv1 = GATv2Conv(
+            num_node_features, hidden_dim, heads=2, concat=False, edge_dim=1
+        )
         
         # 2. Second Graph Attention Layer
-        self.conv2 = GATv2Conv(hidden_dim, hidden_dim, heads=2, concat=False)
+        self.conv2 = GATv2Conv(hidden_dim, hidden_dim, heads=2, concat=False, edge_dim=1)
         
         # 3. Final embedding layer before pooling
-        self.conv3 = GATv2Conv(hidden_dim, embed_dim, heads=1, concat=False)
+        self.conv3 = GATv2Conv(hidden_dim, embed_dim, heads=1, concat=False, edge_dim=1)
         
         # 4. Classification Head (only used for training)
         # We predict the next action type (0-10) to force the network to learn valid football tactics

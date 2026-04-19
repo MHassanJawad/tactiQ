@@ -30,8 +30,8 @@ This document serves as the master checklist for the RT-FSAS ML project. The wor
 - [ ] **3A.3 Training Notebook (`notebooks/03_gnn_training.ipynb`)**: Plot Loss/Accuracy curves to prove the model is actually learning and not randomly guessing.
 
 ### Phase 4A: FAISS Vector Memory
-- [ ] **4A.1 Build Index (`src/retrieval/build_index.py`)**: Pass 50,000+ historical graphs through your trained GNN to get 50,000 vectors, and slide them into a FAISS nearest-neighbor index.
-- [ ] **4A.2 Query API (`src/retrieval/retriever.py`)**: Build the `TacticalRetriever.retrieve()` function that Member B will call to ask "What happened historically in situations similar to this one?"
+- [x] **4A.1 Build Index (`src/retrieval/build_index.py`)**: Pass 50,000+ historical graphs through your trained GNN to get 50,000 vectors, and slide them into a FAISS nearest-neighbor index.
+- [x] **4A.2 Query API (`src/retrieval/retriever.py`)**: Build the `TacticalRetriever.retrieve()` function that Member B will call to ask "What happened historically in situations similar to this one?"
 
 ### Phase 5A: Decision Quality Scorer
 - [ ] **5A.1 Q-Scorer (`src/models/q_scorer.py`)**: A fast 3-Layer MLP that takes a tactical vector + an action and outputs a `q_delta` (how bad/suboptimal an observed pass or shot was compared to the "best" average historical decision).

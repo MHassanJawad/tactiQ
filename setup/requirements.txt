@@ -42,3 +42,4 @@ ipywidgets
 # Utilities
 tqdm
 joblib
+ijson>=3.2
