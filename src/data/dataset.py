@@ -31,7 +31,8 @@ def _iter_consecutive_pairs_streaming(events_file: str) -> Iterator[Tuple[Dict[s
     import ijson
 
     with open(events_file, "rb") as f:
-        it = ijson.items(f, "item")
+        # use_float=True prevents Decimal values that can break downstream numpy/torch math
+        it = ijson.items(f, "item", use_float=True)
         try:
             prev = next(it)
         except StopIteration:
@@ -61,7 +62,15 @@ def iter_consecutive_event_pairs(events_file: str) -> Iterator[Tuple[Dict[str, A
     return _iter_consecutive_pairs_streaming(events_file)
 
 
-def build_datasets(data_dir, out_dir, connect_radius=25.0, train_match_count=15):
+def _flush_full_chunk(chunk, shard_dir: str, shard_idx: int) -> int:
+    if not chunk:
+        return shard_idx
+    shard_path = os.path.join(shard_dir, f"la_liga_2015_16_full_part_{shard_idx:04d}.pt")
+    torch.save(chunk, shard_path)
+    return shard_idx + 1
+
+
+def build_datasets(data_dir, out_dir, connect_radius=25.0, train_match_count=15, full_shard_size=50000):
     """
     Parses full match files to generate thousands of PyG graphs.
     Saves a smaller 'train' subset and a 'full' set for the FAISS index.
@@ -75,9 +84,17 @@ def build_datasets(data_dir, out_dir, connect_radius=25.0, train_match_count=15)
         matches = json.load(f)
         
     builder = GraphBuilder(connect_radius=connect_radius)
+    os.makedirs(out_dir, exist_ok=True)
+    full_shard_dir = os.path.join(out_dir, "la_liga_2015_16_full_shards")
+    os.makedirs(full_shard_dir, exist_ok=True)
+    for name in os.listdir(full_shard_dir):
+        if name.startswith("la_liga_2015_16_full_part_") and name.endswith(".pt"):
+            os.remove(os.path.join(full_shard_dir, name))
     
     train_graphs = []
-    full_graphs = []
+    full_chunk = []
+    full_count = 0
+    shard_idx = 0
     
     # Select the first N matches for the training set to keep CPU training fast
     train_match_ids = set([m['match_id'] for m in matches[:train_match_count]])
@@ -92,6 +109,7 @@ def build_datasets(data_dir, out_dir, connect_radius=25.0, train_match_count=15)
         print("Warning: ijson not installed; using json.load (may MemoryError on huge files). pip install ijson")
 
     skipped_matches = []
+    graph_build_skips = 0
 
     for match in tqdm(matches, desc="Parsing Matches"):
         mid = match['match_id']
@@ -114,9 +132,15 @@ def build_datasets(data_dir, out_dir, connect_radius=25.0, train_match_count=15)
                 try:
                     graph = builder.build_from_event(curr_ev, next_action_label=label)
                 except Exception:
+                    graph_build_skips += 1
                     continue
 
-                full_graphs.append(graph)
+                full_chunk.append(graph)
+                full_count += 1
+                if len(full_chunk) >= full_shard_size:
+                    shard_idx = _flush_full_chunk(full_chunk, full_shard_dir, shard_idx)
+                    full_chunk = []
+
                 if mid in train_match_ids:
                     train_graphs.append(graph)
 
@@ -129,21 +153,21 @@ def build_datasets(data_dir, out_dir, connect_radius=25.0, train_match_count=15)
             print(f"\nJSONDecodeError match_id={mid}: {e}")
             continue
                 
-    os.makedirs(out_dir, exist_ok=True)
-    
     train_path = os.path.join(out_dir, "la_liga_2015_16_train.pt")
-    full_path = os.path.join(out_dir, "la_liga_2015_16_full.pt")
     
     if skipped_matches:
         print(f"\nSkipped {len(skipped_matches)} match(es) due to errors (see logs above).")
+    if graph_build_skips:
+        print(f"Skipped {graph_build_skips:,} event pair(s) due to graph build exceptions.")
 
     print(f"\nFinal Statistics:")
     print(f"  Training Set: {len(train_graphs):,} graphs")
-    print(f"  Full Index Set: {len(full_graphs):,} graphs")
+    print(f"  Full Index Set: {full_count:,} graphs")
     
     print(f"\nSaving to disk...")
     torch.save(train_graphs, train_path)
-    torch.save(full_graphs, full_path)
+    shard_idx = _flush_full_chunk(full_chunk, full_shard_dir, shard_idx)
+    print(f"  Full index shards: {shard_idx} file(s) in {full_shard_dir}")
     
     print("Done! Dataset fully cached.")
 

@@ -84,8 +84,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--graphs_path",
         type=str,
-        default="graphs/la_liga_2015_16_full.pt",
-        help="List of PyG Data objects (full index set).",
+        default="graphs/la_liga_2015_16_full_shards",
+        help="Full index set: either single .pt list file or a shard directory.",
     )
     p.add_argument(
         "--checkpoint_path",
@@ -106,6 +106,36 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _load_graphs(graphs_path: str) -> List[Any]:
+    if os.path.isfile(graphs_path):
+        graphs = torch.load(graphs_path, map_location="cpu", weights_only=False)
+        if not isinstance(graphs, list) or len(graphs) == 0:
+            raise ValueError("graphs_path file must contain a non-empty list of PyG Data objects.")
+        return graphs
+
+    if os.path.isdir(graphs_path):
+        shard_files = sorted(
+            [
+                os.path.join(graphs_path, name)
+                for name in os.listdir(graphs_path)
+                if name.startswith("la_liga_2015_16_full_part_") and name.endswith(".pt")
+            ]
+        )
+        if not shard_files:
+            raise ValueError(f"No shard files found in directory: {graphs_path}")
+        graphs: List[Any] = []
+        for shard_path in shard_files:
+            shard = torch.load(shard_path, map_location="cpu", weights_only=False)
+            if not isinstance(shard, list):
+                raise ValueError(f"Shard is not a list: {shard_path}")
+            graphs.extend(shard)
+        if not graphs:
+            raise ValueError(f"Shard directory loaded but contained 0 graphs: {graphs_path}")
+        return graphs
+
+    raise FileNotFoundError(f"graphs_path does not exist: {graphs_path}")
+
+
 def main() -> None:
     args = parse_args()
 
@@ -118,9 +148,7 @@ def main() -> None:
             f"Checkpoint not found: {args.checkpoint_path}. Train with python -m src.training.train_gnn first."
         )
 
-    graphs = torch.load(args.graphs_path, map_location="cpu", weights_only=False)
-    if not isinstance(graphs, list) or len(graphs) == 0:
-        raise ValueError("graphs_path must be a non-empty list of PyG Data objects.")
+    graphs = _load_graphs(args.graphs_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = TacticalGNN(
