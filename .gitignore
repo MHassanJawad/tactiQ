@@ -8,10 +8,9 @@ env/
 open-data-master.zip.opdownload
 open-data-master.zip
 open-data/
-graphs/*.pt
-checkpoints/*.pt
-index/*.index
-index/*.jsonl
+graphs/
+checkpoints/
+index/
 
 # Python artifacts
 __pycache__/
