@@ -32,6 +32,8 @@ def run_epoch(
     model: TacticalGNN,
     loader: DataLoader,
     device: torch.device,
+    class_weights: torch.Tensor = None,
+    label_smoothing: float = 0.0,
     optimizer: torch.optim.Optimizer = None,
 ) -> Tuple[float, float]:
     is_train = optimizer is not None
@@ -49,7 +51,12 @@ def run_epoch(
             optimizer.zero_grad()
 
         logits = model(batch)
-        loss = F.cross_entropy(logits, targets)
+        loss = F.cross_entropy(
+            logits,
+            targets,
+            weight=class_weights,
+            label_smoothing=label_smoothing,
+        )
 
         if is_train:
             loss.backward()
@@ -81,7 +88,52 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num_classes", type=int, default=11)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--patience", type=int, default=8)
+    parser.add_argument(
+        "--use_class_weights",
+        action="store_true",
+        help="Use inverse-frequency class weights for cross-entropy.",
+    )
+    parser.add_argument(
+        "--label_smoothing",
+        type=float,
+        default=0.0,
+        help="Optional label smoothing value in [0, 1).",
+    )
+    parser.add_argument(
+        "--scheduler",
+        type=str,
+        choices=["none", "plateau"],
+        default="none",
+        help="Learning-rate scheduler type.",
+    )
+    parser.add_argument(
+        "--scheduler_factor",
+        type=float,
+        default=0.5,
+        help="ReduceLROnPlateau factor.",
+    )
+    parser.add_argument(
+        "--scheduler_patience",
+        type=int,
+        default=3,
+        help="ReduceLROnPlateau patience (epochs).",
+    )
     return parser.parse_args()
+
+
+def compute_class_weights(graphs: List[torch.Tensor], num_classes: int) -> torch.Tensor:
+    counts = torch.zeros(num_classes, dtype=torch.float32)
+    for g in graphs:
+        y = int(g.y.view(-1)[0].item())
+        if 0 <= y < num_classes:
+            counts[y] += 1.0
+
+    # Avoid division by zero for classes not present in the current split.
+    safe_counts = counts.clone()
+    safe_counts[safe_counts == 0] = 1.0
+    weights = counts.sum() / (num_classes * safe_counts)
+    weights = weights / weights.mean()
+    return weights
 
 
 def main() -> None:
@@ -113,6 +165,19 @@ def main() -> None:
         num_classes=args.num_classes,
     ).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    scheduler = None
+    if args.scheduler == "plateau":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode="min",
+            factor=args.scheduler_factor,
+            patience=args.scheduler_patience,
+        )
+
+    class_weights = None
+    if args.use_class_weights:
+        class_weights = compute_class_weights(train_graphs, args.num_classes).to(device)
+        print(f"Using class weights: {class_weights.detach().cpu().tolist()}")
 
     history: Dict[str, List[float]] = {
         "train_loss": [],
@@ -128,18 +193,37 @@ def main() -> None:
     print(f"Training samples: {len(train_graphs):,} | Validation samples: {len(val_graphs):,}")
 
     for epoch in range(1, args.epochs + 1):
-        train_loss, train_acc = run_epoch(model, train_loader, device, optimizer=optimizer)
-        val_loss, val_acc = run_epoch(model, val_loader, device, optimizer=None)
+        train_loss, train_acc = run_epoch(
+            model,
+            train_loader,
+            device,
+            class_weights=class_weights,
+            label_smoothing=args.label_smoothing,
+            optimizer=optimizer,
+        )
+        val_loss, val_acc = run_epoch(
+            model,
+            val_loader,
+            device,
+            class_weights=class_weights,
+            label_smoothing=args.label_smoothing,
+            optimizer=None,
+        )
+
+        if scheduler is not None:
+            scheduler.step(val_loss)
 
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
 
+        current_lr = optimizer.param_groups[0]["lr"]
         print(
             f"Epoch {epoch:03d}/{args.epochs} | "
             f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} | "
-            f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}"
+            f"val_loss={val_loss:.4f} val_acc={val_acc:.4f} | "
+            f"lr={current_lr:.6f}"
         )
 
         if val_loss < best_val_loss:
