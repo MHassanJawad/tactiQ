@@ -1,0 +1,14 @@
+{
+  "num_samples": 50,
+  "retrieval": {
+    "top1_next_event_match_rate": 0.78,
+    "topk_next_event_contains_rate": 1.0,
+    "avg_top1_similarity": 0.9999999797344208
+  },
+  "advice_quality": {
+    "full_avg_words": 59.36,
+    "dumb_avg_words": 59,
+    "full_avg_specificity_score": 6.1,
+    "dumb_avg_specificity_score": 6
+  }
+}
