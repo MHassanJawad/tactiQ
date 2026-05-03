@@ -9,7 +9,7 @@ class QScorer(nn.Module):
         embedding_dim: int = 128,
         hidden_dim_1: int = 128,
         hidden_dim_2: int = 64,
-        num_actions: int = 15,
+        num_actions: int = 11,
         dropout: float = 0.2,
     ) -> None:
         """

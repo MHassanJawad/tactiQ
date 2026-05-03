@@ -36,6 +36,7 @@ class RTFSASPipeline:
         gnn_num_classes: int = 11,
         device: Optional[str] = None,
         gemini_api_key: Optional[str] = None,
+        q_scorer_checkpoint_path: Optional[str] = None,
     ) -> None:
         self.retriever_k = retriever_k
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
@@ -47,7 +48,7 @@ class RTFSASPipeline:
             embed_dim=gnn_embed_dim,
             num_classes=gnn_num_classes,
         ).to(self.device)
-        self.q_scorer = QScorer()
+        self.q_scorer = QScorer(num_actions=gnn_num_classes).to(self.device)
         self.coach = GeminiCoach(api_key=gemini_api_key)
 
         if not os.path.exists(gnn_checkpoint_path):
@@ -57,6 +58,11 @@ class RTFSASPipeline:
         state = torch.load(gnn_checkpoint_path, map_location=self.device, weights_only=False)
         self.gnn.load_state_dict(state, strict=True)
         self.gnn.eval()
+
+        if q_scorer_checkpoint_path and os.path.exists(q_scorer_checkpoint_path):
+            q_state = torch.load(q_scorer_checkpoint_path, map_location=self.device, weights_only=False)
+            self.q_scorer.load_state_dict(q_state, strict=True)
+        self.q_scorer.eval()
 
         self.retriever = TacticalRetriever(index_dir=index_dir)
 
@@ -88,7 +94,7 @@ class RTFSASPipeline:
         embedding = self._encode_current_state(current_event)
         retrieved = self.retriever.retrieve(embedding, k=self.retriever_k)
         actual_action = self._event_to_action_id(current_event)
-        q_delta = self.q_scorer.compute_delta(embedding, actual_action=actual_action)
+        q_delta = self.q_scorer.compute_delta(embedding.to(self.device), actual_action=actual_action)
 
         game_state = {
             "minute": current_minute,
@@ -114,6 +120,7 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--embed_dim", type=int, default=128)
     p.add_argument("--num_classes", type=int, default=11)
     p.add_argument("--gemini_api_key", type=str, default=None)
+    p.add_argument("--q_scorer_checkpoint", type=str, default=None)
     p.add_argument("--minute", type=int, default=67)
     p.add_argument("--event_type", type=str, default="Pass")
     p.add_argument("--team_name", type=str, default="Team A")
@@ -132,6 +139,7 @@ def main() -> None:
         gnn_embed_dim=args.embed_dim,
         gnn_num_classes=args.num_classes,
         gemini_api_key=args.gemini_api_key,
+        q_scorer_checkpoint_path=args.q_scorer_checkpoint,
     )
     live_events = [
         {

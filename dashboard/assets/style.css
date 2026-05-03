@@ -1,0 +1,82 @@
+.app-shell {
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+  min-height: 100vh;
+  color: #e5e7eb;
+  padding-bottom: 32px;
+}
+
+.header-wrap {
+  padding: 24px 6px 10px 6px;
+}
+
+.app-title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.app-subtitle {
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.panel-card,
+.metric-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+/* Form labels: high contrast on dark panels (Bootstrap form-label + plain labels) */
+.panel-card .form-label,
+.panel-card label {
+  color: #f3f4f6 !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.35rem;
+}
+
+/* Slider readouts / secondary text near controls */
+.panel-card .rc-slider-mark-text,
+.panel-card .Select-placeholder {
+  color: #d1d5db !important;
+}
+
+.metric-title {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.metric-value {
+  margin-top: 2px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.kpi-box {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.advice-box {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 12px;
+  min-height: 250px;
+  color: #e5e7eb;
+  white-space: pre-wrap;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+.status-text {
+  color: #93c5fd;
+  font-size: 0.9rem;
+}
+
